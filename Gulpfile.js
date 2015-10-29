@@ -15,7 +15,9 @@ gulp.task('js', function () {
 gulp.task('css', function () {
 	return gulp.src('./src/style.css')
 		.pipe($.plumber())
-		.pipe($.autoprefixer())
+		.pipe($.autoprefixer({
+			browsers: ['last 5 versions', '> 1%', 'IE 9']
+		}))
 		.pipe($.minifyCss())
 		.pipe(gulp.dest('./dist'))
 		.pipe($.size());
