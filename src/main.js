@@ -1,12 +1,11 @@
 /**
  * Scratch plugin for jQuery - 2015
  */
-(function ($) {
+(function ($, document, plgName) {
 	'use strict';
 	
 	var isSupported = checkSupport();
 	var isClicked = false;
-	var storeKey = 'scratch';
 	
 	/**
 	 * Check if browser supports canvas
@@ -20,9 +19,11 @@
 	 * Plugin constructor
 	 */
 	function Plugin ($el, options) {
-		this.$el = $el;
-		this.options = $.extend({}, $.fn.scratch.defaults, options);
-		this.init();
+		var self = this;
+		
+		self.$el = $el;
+		self.options = $.extend({}, $.fn.scratch.defaults, options);
+		self.init();
 	}
 	
 	Plugin.prototype = {
@@ -81,38 +82,39 @@
 		 * @return void
 		 */
 		init: function() {
-			var width = this.options.width || this.$el.children().eq(0).width();
+			var self = this;
+			var width = self.options.width || self.$el.children().eq(0).width();
 			var element = isSupported ? 'canvas' : 'div';
 			
-			this.$el.width(width).height(this.options.height);
-			this.canvas = document.createElement(element);
-			this.canvas.setAttribute('class', 'scratch-overlay scratch-' + element);
+			self.$el.width(width).height(self.options.height);
+			self.canvas = document.createElement(element);
+			self.canvas.setAttribute('class', 'scratch-overlay scratch-' + element);
 			
-			var canvasWidth = this.$el.outerWidth();
-			var canvasHeight = this.$el.outerHeight();
+			var canvasWidth = self.$el.outerWidth();
+			var canvasHeight = self.$el.outerHeight();
 			
 			// Set up overlay element (canvas or div element, depends on browser support)
 			if (isSupported) {
-				this.canvas.width = canvasWidth;
-				this.canvas.height = canvasHeight;
+				self.canvas.width = canvasWidth;
+				self.canvas.height = canvasHeight;
 				
-				this.ctx = this.canvas.getContext('2d');
-				this.ctx.fillStyle = this.options.background;
-				this.ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+				self.ctx = self.canvas.getContext('2d');
+				self.ctx.fillStyle = self.options.background;
+				self.ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 			} else {
-				this.canvas.style.backgroundColor = this.options.background;
+				self.canvas.style.backgroundColor = self.options.background;
 			}
 			
 			// Append cursor and canvas to the container
 			// attach events
-			this.$el
-				.append(this.canvas)
+			self.$el
+				.append(self.canvas)
 				.append('<div class="scratch-cursor"/>')
-				.on('scratch.complete', this.options.onComplete)
-				.on('scratch.scratch', this.options.onScratch)
-				.on('scratch.disable', this.options.onDisable)
-				.on('scratch.enable', this.options.onEnable)
-				.on('scratch.reset', this.options.onReset)
+				.on('scratch.complete', self.options.onComplete)
+				.on('scratch.scratch', self.options.onScratch)
+				.on('scratch.disable', self.options.onDisable)
+				.on('scratch.enable', self.options.onEnable)
+				.on('scratch.reset', self.options.onReset)
 				.find('img').on('dragstart', function () {return false;});
 			
 			// Create the pixel array
@@ -120,20 +122,20 @@
 			
 			// define array pixel for the current instance
 			// prevent prototype modification...
-			this.pixels = [];
+			self.pixels = [];
 			
 			for (i = 0 ; i < canvasWidth ; i++) {
 				for (j = 0 ; j < canvasHeight ; j++) {
-					if (!this.pixels[i]) {
-						this.pixels[i] = [];
+					if (!self.pixels[i]) {
+						self.pixels[i] = [];
 					}
 					
-					this.pixels[i][j] = 1;
+					self.pixels[i][j] = 1;
 				}
 			}
 			
 			// Enable scratching...
-			this.enable();
+			self.enable();
 		},
 		
 		/**
@@ -141,11 +143,13 @@
 		 * @return Float
 		 */
 		getPercent: function () {
+			var self = this;
+			
 			if (isSupported) {
-				return this.revealed ? this.revealed / (this.canvas.width * this.canvas.height) : 0;
+				return self.revealed ? self.revealed / (self.canvas.width * self.canvas.height) : 0;
 			}
 			
-			return this.isComplete ? 100 : 0;
+			return self.isComplete ? 100 : 0;
 		},
 		
 		/**
@@ -154,14 +158,15 @@
 		 * @return Float
 		 */
 		getRevealRatio: function () {
+			var self = this;
 			var count = 0;
 			var i, j, px, py;
-			var width = this.pixels.length;
-			var height = this.pixels[0].length;
+			var width = self.pixels.length;
+			var height = self.pixels[0].length;
 			
 			for(i = 0 ; i < width ; i++) {
 				for (j = 0 ; j < height ; j++) {
-					if (0 === this.pixels[i][j]) {
+					if (0 === self.pixels[i][j]) {
 						px = Math.pow(1-(2*Math.abs(i-width/2)/width),1.5);
 						py = Math.pow(1-(2*Math.abs(j-height/2)/height),1.5);
 						count +=  px * py;
@@ -180,14 +185,15 @@
 			e.preventDefault();
 			
 			// get cursor position
-			var offset = this.$el.offset();
+			var self = this;
+			var offset = self.$el.offset();
 			var x = (e.pageX || e.originalEvent.touches[0].pageX) - offset.left;
 			var y = (e.pageY || e.originalEvent.touches[0].pageY) - offset.top;
 			
 			// update cursor div
-			this.$el.find('.scratch-cursor').css({
-				top: y - this.options.cursorWidth,
-				left: x - this.options.cursorWidth,
+			self.$el.find('.scratch-cursor').css({
+				top: y - self.options.cursorWidth,
+				left: x - self.options.cursorWidth,
 				display: 'block'
 			});
 
@@ -198,28 +204,28 @@
 			}
 
 			// if there's a last pos in memory, calculate the path
-			if (this.lastPos) {
+			if (self.lastPos) {
 				var tmpX, tmpY, min, max, inc;
 				
 				// equation: x = k
-				if (x == this.lastPos.x) {
-					min = Math.min(y, this.lastPos.y);
-					max = Math.max(y, this.lastPos.y);
-					inc = this.options.cursorWidth / 2;
+				if (x == self.lastPos.x) {
+					min = Math.min(y, self.lastPos.y);
+					max = Math.max(y, self.lastPos.y);
+					inc = self.options.cursorWidth / 2;
 					
 					for (tmpY = min ; tmpY < max ; tmpY += inc) {
-						this.scratch(x, tmpY);
+						self.scratch(x, tmpY);
 					}
 				}
 				// equation: y = ax + b
 				else {
-					min = Math.min(x, this.lastPos.x);
-					max = Math.max(x, this.lastPos.x);
-					inc = this.options.cursorWidth / 4;
+					min = Math.min(x, self.lastPos.x);
+					max = Math.max(x, self.lastPos.x);
+					inc = self.options.cursorWidth / 4;
 					
 					// calculate the slope (a)
 					// (yb - ya) / (xb - xa)
-					var coeff = (this.lastPos.y - y) / (this.lastPos.x - x);
+					var coeff = (self.lastPos.y - y) / (self.lastPos.x - x);
 					
 					// calculate the y intercept (b)
 					// y = ax + b => b = y - ax
@@ -227,31 +233,31 @@
 	
 					for (tmpX = min ; tmpX < max ; tmpX += inc) {
 						tmpY = coeff * tmpX + intercept;
-						this.scratch(tmpX, tmpY);
+						self.scratch(tmpX, tmpY);
 					}
 				}
 				
 			} else {
 				// first scratch since the last mouse down
 				// scratch only the current pixel
-				this.scratch(x, y);
+				self.scratch(x, y);
 			}
 			
 			// mouseup is called before click event, so we don't have to set last pos if it is a click event
 			if (e.type !== 'click') {
-				// remember this pos
-				this.lastPos = {
+				// remember self pos
+				self.lastPos = {
 					x: x,
 					y: y
 				};
 			}
 			
 			// trigger event
-			this.$el.trigger('scratch.scratch');
+			self.$el.trigger('scratch.scratch');
 			
 			// if we're full, clear the container and display the card
-			if (this.isRevealed()) {
-				this.clear();
+			if (self.isRevealed()) {
+				self.clear();
 			}
 		},
 		
@@ -260,10 +266,11 @@
 		 * @return void
 		 */
 		scratch: function (x, y) {
+			var self = this;
 			var i, j;
 			
 			// delta is the distance where we can draw around the given position
-			var delta = Math.round(this.options.cursorWidth / 2);
+			var delta = Math.round(self.options.cursorWidth / 2);
 			
 			x = parseInt(x);
 			y = parseInt(y);
@@ -276,29 +283,28 @@
 						// eg if distance <= radius
 						// formula : Sqrt((xb - xa)² + (yb - ya)²)
 						// Sqrt(i² + j²) in our case because xb = x + i and yb = y + j
-						(!this.options.isCircle || Math.sqrt(i*i + j*j) <= delta)
+						(!self.options.isCircle || Math.sqrt(i*i + j*j) <= delta) &&
 						// only if the pixel is visible (has not been scratched)
-						&& this.pixels[x+i]
-						&& this.pixels[x+i][y+j]
+						self.pixels[x+i] && self.pixels[x+i][y+j]
 					) {
-						this.pixels[x+i][y+j] = 0;
-						this.revealed++;
+						self.pixels[x+i][y+j] = 0;
+						self.revealed++;
 					}
 				}
 			}
 			
 			// clear canvas
-			if (this.options.isCircle) {
-				this.ctx.save();
-				this.ctx.globalCompositeOperation = 'destination-out';
-				this.ctx.beginPath();
-				this.ctx.arc(x, y, delta, 0, 2 * Math.PI);
-				this.ctx.closePath();
-				this.ctx.fillStyle = "rgba(0, 0, 0, 1)";
-				this.ctx.fill();
-				this.ctx.restore();
+			if (self.options.isCircle) {
+				self.ctx.save();
+				self.ctx.globalCompositeOperation = 'destination-out';
+				self.ctx.beginPath();
+				self.ctx.arc(x, y, delta, 0, 2 * Math.PI);
+				self.ctx.closePath();
+				self.ctx.fillStyle = "rgba(0, 0, 0, 1)";
+				self.ctx.fill();
+				self.ctx.restore();
 			} else {
-				this.ctx.clearRect(x-delta, y-delta, this.options.cursorWidth, this.options.cursorWidth);
+				self.ctx.clearRect(x-delta, y-delta, self.options.cursorWidth, self.options.cursorWidth);
 			}
 		},
 		
@@ -307,7 +313,8 @@
 		 * @return void
 		 */
 		isRevealed: function () {
-			return this.options.revealRatio ? this.getRevealRatio() > this.options.revealRatio : this.getPercent() >= this.options.percent / 100;
+			var self = this;
+			return self.options.revealRatio ? self.getRevealRatio() > self.options.revealRatio : self.getPercent() >= self.options.percent / 100;
 		},
 		
 		/**
@@ -316,26 +323,26 @@
 		 */
 		enable: function () {
 			var self = this;
-			this.$el.find('.scratch-overlay').removeClass('scratch-overlay-disabled').show();
+			self.$el.find('.scratch-overlay').removeClass('scratch-overlay-disabled').show();
 			
-			if (!this.isComplete && !this.isRevealed()) {
+			if (!self.isComplete && !self.isRevealed()) {
 				if (isSupported) {
-					this.$el.on('mousemove touchmove click', $.proxy(this.mousemove, this));
-					this.$el.on('mouseleave', function () {
+					self.$el.on('mousemove touchmove click', $.proxy(self.mousemove, self));
+					self.$el.on('mouseleave', function () {
 						self.$el.find('.scratch-cursor').hide();
 					});
 				} else {
-					this.$el.on('click', function () {
+					self.$el.on('click', function () {
 						self.$el.find('.scratch-overlay').fadeOut($.proxy(self.clear, self));
 					});
 				}
 				
-				this.$el.on('mouseleave mouseup touchend', function () {
+				self.$el.on('mouseleave mouseup touchend', function () {
 					self.lastPos = false;
 				});
 			}
 			
-			this.$el.trigger('scratch.enable');
+			self.$el.trigger('scratch.enable');
 		},
 		
 		/**
@@ -343,14 +350,15 @@
 		 * @return void
 		 */
 		clear: function () {
-			this.disable();
+			var self = this;
 			
-			this.isComplete = true;
-			this.lastPos = false;
+			self.disable();
+			self.isComplete = true;
+			self.lastPos = false;
 			isClicked = false;
 			
-			this.$el.find('.scratch-overlay').hide();
-			this.$el.trigger('scratch.complete', this.getPercent(), this.getRevealRatio());	
+			self.$el.find('.scratch-overlay').hide();
+			self.$el.trigger('scratch.complete', self.getPercent(), self.getRevealRatio());	
 		},
 		
 		/**
@@ -358,21 +366,23 @@
 		 * @return void
 		 */
 		reset: function () {
-			this.disable();
-			this.revealed = 0;
-			this.isComplete = false;
-			this.pixels = [];
+			var self = this;
+			
+			self.disable();
+			self.revealed = 0;
+			self.isComplete = false;
+			self.pixels = [];
 			
 			var i, j;
 			
-			for(i = 0 ; i < this.pixels.length ; i++) {
-				for (j = 0 ; j < this.pixels[i].length ; j++) {
-					this.pixels[i][j] = 1;
+			for(i = 0 ; i < self.pixels.length ; i++) {
+				for (j = 0 ; j < self.pixels[i].length ; j++) {
+					self.pixels[i][j] = 1;
 				}
 			}
 			
-			this.enable();
-			this.$el.trigger('scratch.reset');
+			self.enable();
+			self.$el.trigger('scratch.reset');
 		},
 		
 		/**
@@ -381,10 +391,12 @@
 		 * @return void
 		 */
 		disable: function () {
-			this.$el.find('.scratch-cursor').hide();
-			this.$el.off('mousemove touchmove click');
-			this.$el.find('.scratch-overlay').addClass('scratch-overlay-disabled');
-			this.$el.trigger('scratch.disabled');
+			var self = this;
+			
+			self.$el.find('.scratch-cursor').hide();
+			self.$el.off('mousemove touchmove click');
+			self.$el.find('.scratch-overlay').addClass('scratch-overlay-disabled');
+			self.$el.trigger('scratch.disabled');
 		},
 		
 		/**
@@ -393,7 +405,7 @@
 		 */
 		destroy: function () {
 			this.clear();
-			this.$el.removeData(storeKey)
+			this.$el.removeData(plgName)
 				.off('scratch.complete')
 				.off('scratch.scratch')
 				.off('scratch.disable')
@@ -406,7 +418,7 @@
 	/**
 	 * Plugin definition
 	 */
-	$.fn.scratch = function (options) {
+	$.fn[plgName] = function (options) {
 		options = options || {};
 
 		var args = [].slice.call(arguments, 1);
@@ -415,11 +427,11 @@
 		
 		ret = this.map(function() {
 			self = $(this);
-			plg = self.data(storeKey);
+			plg = self.data(plgName);
 			
 			if (!plg) {
 				plg = new Plugin(self, options);
-				self.data(storeKey, plg);
+				self.data(plgName, plg);
 			} else if (typeof options == 'string' && typeof plg[options] == 'function') {
 				ret = plg[options].apply(plg, args);
 			}
@@ -447,14 +459,14 @@
 		return ret.length > 1 ? ret : ret[0];
 	};
 	
-	$.fn.scratch.defaults = {
+	$.fn[plgName].defaults = {
 		background: '#666',
 		width: null,
 		height: 'auto',
 		cursorWidth: 20,
 		isCircle: true,
 		percent: 90,
-		revealRatio: .11,
+		revealRatio: 0.11,
 		onComplete: null,
 		onScratch: null,
 		onDisable: null,
@@ -464,7 +476,7 @@
 	
 	$(function () {
 		$('body')
-			.on('mousedown touchstart', function () {isClicked = true})
-			.on('mouseup touchend', function () {isClicked = false});
+			.on('mousedown touchstart', function () {isClicked = true;})
+			.on('mouseup touchend', function () {isClicked = false;});
 	});
-})(jQuery);
+})(jQuery, document, 'scratch');

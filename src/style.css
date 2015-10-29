@@ -5,13 +5,13 @@ body {
 .scratch {
 	position: relative;
 	display: block;
-    -webkit-user-select: none !important;
-   cursor: none;
-   max-width: 100%;
-   height: auto;
-   background-color: #ccc;
-   text-align: center;
-   margin-bottom: 10px;
+    user-select: none !important;
+    cursor: none;
+    max-width: 100%;
+    height: auto;
+    background-color: #ccc;
+    text-align: center;
+    margin-bottom: 10px;
 }
 
 .scratch-inner {
@@ -46,7 +46,7 @@ body {
 	pointer-events: none;
 	-webkit-user-select: none !important;
 	/*background: url(https://0.s3.envato.com/files/122128592/assets/images/coin2.png) 0% 0% / 100% no-repeat;*/
-	background: url(images/euro.png) center center / 100% no-repeat;
+	background: url(euro.png) center center / 100% no-repeat;
 	display: none;
 }
 
