@@ -1,0 +1,137 @@
+$.extend($.validator.messages, {
+	required: "Ce champ est obligatoire.",
+	remote: "Veuillez corriger ce champ.",
+	email: "Veuillez fournir une adresse électronique valide.",
+	url: "Veuillez fournir une adresse URL valide.",
+	date: "Veuillez fournir une date valide.",
+	dateISO: "Veuillez fournir une date valide (ISO).",
+	number: "Veuillez fournir un numéro valide.",
+	digits: "Veuillez fournir seulement des chiffres.",
+	creditcard: "Veuillez fournir un numéro de carte de crédit valide.",
+	equalTo: "Veuillez fournir encore la même valeur.",
+	extension: "Veuillez fournir une valeur avec une extension valide.",
+	maxlength: $.validator.format("Veuillez fournir au plus {0} caractères."),
+	minlength: $.validator.format("Veuillez fournir au moins {0} caractères."),
+	rangelength: $.validator.format("Veuillez fournir une valeur qui contient entre {0} et {1} caractères."),
+	range: $.validator.format("Veuillez fournir une valeur entre {0} et {1}."),
+	max: $.validator.format("Veuillez fournir une valeur inférieure ou égale à {0}."),
+	min: $.validator.format("Veuillez fournir une valeur supérieure ou égale à {0}."),
+	maxWords: $.validator.format("Veuillez fournir au plus {0} mots."),
+	minWords: $.validator.format("Veuillez fournir au moins {0} mots."),
+	rangeWords: $.validator.format("Veuillez fournir entre {0} et {1} mots."),
+	letterswithbasicpunc: "Veuillez fournir seulement des lettres et des signes de ponctuation.",
+	alphanumeric: "Veuillez fournir seulement des lettres, nombres, espaces et soulignages.",
+	lettersonly: "Veuillez fournir seulement des lettres.",
+	nowhitespace: "Veuillez ne pas inscrire d'espaces blancs.",
+	ziprange: "Veuillez fournir un code postal entre 902xx-xxxx et 905-xx-xxxx.",
+	integer: "Veuillez fournir un nombre non décimal qui est positif ou négatif.",
+	vinUS: "Veuillez fournir un numéro d'identification du véhicule (VIN).",
+	dateITA: "Veuillez fournir une date valide.",
+	time: "Veuillez fournir une heure valide entre 00:00 et 23:59.",
+	phoneUS: "Veuillez fournir un numéro de téléphone valide.",
+	phoneUK: "Veuillez fournir un numéro de téléphone valide.",
+	mobileUK: "Veuillez fournir un numéro de téléphone mobile valide.",
+	strippedminlength: $.validator.format("Veuillez fournir au moins {0} caractères."),
+	email2: "Veuillez fournir une adresse électronique valide.",
+	url2: "Veuillez fournir une adresse URL valide.",
+	creditcardtypes: "Veuillez fournir un numéro de carte de crédit valide.",
+	ipv4: "Veuillez fournir une adresse IP v4 valide.",
+	ipv6: "Veuillez fournir une adresse IP v6 valide.",
+	require_from_group: "Veuillez fournir au moins {0} de ces champs.",
+	nifES: "Veuillez fournir un numéro NIF valide.",
+	nieES: "Veuillez fournir un numéro NIE valide.",
+	cifES: "Veuillez fournir un numéro CIF valide.",
+	postalCodeCA: "Veuillez fournir un code postal valide."
+});
+
+$.validator.setDefaults({
+	event: 'keyup,blur,change',
+	errorClass: 'has-error',
+	validClass: 'hide',
+	ignore: '.hide',
+	showErrors: function (messages, errors) {
+		var icon;
+		
+		errors.forEach($.proxy(function (error) {
+			if (error.element.tagName === 'SELECT') {
+				icon = $(error.element).closest('.form-group').find('.glyphicon');
+			} else if (error.element.type == 'radio' || error.element.type == 'checkbox') {
+				icon = $(error.element).closest('.form-group').find('.glyphicon');
+			} else if (error.element.type === 'hidden') {
+				icon = $(error.element).next('.glyphicon');
+			} else {
+				icon = $(error.element).closest('.form-group').find('.glyphicon');
+			}
+			
+			icon.attr('data-original-title', error.message).tooltip('fixTitle');
+
+			this.settings.highlight.call(this, error.element, this.settings.errorClass, this.settings.validClass);
+		}, this));
+
+		this.validElements().each($.proxy(function (idx, elm) {
+			this.settings.unhighlight.call(this, elm, this.settings.errorClass, this.settings.validClass);
+		}, this));
+	},
+	highlight: function (element, errorClass, validClass) {
+		var icon;
+		
+		if (element.tagName === 'SELECT') {
+			icon = $(element).closest('.form-group').find('.glyphicon');
+		} else if (element.type == 'checkbox' || element.type == 'radio') {
+			icon = $(element).closest('.form-group').find('.glyphicon');
+		} else if (element.type === 'hidden') {
+			icon = $(element).next('.glyphicon');
+		} else {
+			icon = $(element).closest('.form-group').find('.glyphicon');
+		}
+		
+		icon.removeClass(validClass).closest('.form-group').addClass(errorClass);
+	},
+	unhighlight: function (element, errorClass, validClass) {
+		var icon;
+		
+		if (element.tagName === 'SELECT') {
+			icon = $(element).closest('.form-group').find('.glyphicon');
+		} else if (element.type == 'checkbox' || element.type == 'radio') {
+			icon = $(element).closest('.form-group').find('.glyphicon');
+		} else if (element.type === 'hidden') {
+			icon = $(element).next('.glyphicon');
+		} else {
+			icon = $(element).closest('.form-group').find('.glyphicon');
+		}
+		
+		icon.addClass(validClass).closest('.form-group').removeClass(errorClass);
+	},
+});
+
+$.validator.addMethod('zip', function (value, element) {
+    return /^\d[a-zA-Z0-9]\d{3}$/.test(value);
+}, 'Un code postal est composé de 5 chiffres.');
+
+$.validator.addMethod('captcha', function (value, element) {
+    return value && value.length == 6;
+}, 'Le captcha doit contenir exactement 6 caractères.');
+
+$.validator.addMethod('alphanum', function (value, element) {
+    return value === '' || /^[a-zA-Z0-9\-_]+$/.test(value);
+}, 'L\'identifiant ne doit contenir que des chiffres, des lettres ou des tirets.');
+
+$.validator.addMethod('civilite', function (value, element) {
+    return !!$("input[name=" + $(element).attr("name") + "]").filter(':checked').length;
+}, 'Veuillez renseigner votre civilité');
+
+$.validator.addMethod('phone', function (value, element) {
+    if (value.length == 0) {
+        return true;
+    }
+
+    if (!/^33 \(0\)\d \d\d \d\d \d\d \d\d$/i.test(value)) {
+        if (/^0(\d)[\s\-.]?(\d\d)[\s\-.]?(\d\d)[\s\-.]?(\d\d)[\s\-.]?(\d\d)$/.test(value)) {
+            value = value.replace(/^0(\d)[\s\-.]?(\d\d)[\s\-.]?(\d\d)[\s\-.]?(\d\d)[\s\-.]?(\d\d)$/, '33 (0)$1 $2 $3 $4 $5');
+            $(element).val(value);
+            return true;
+        }
+    }
+
+    return !!/^33 \(0\)\d \d\d \d\d \d\d \d\d$/i.test(value);
+}, 'Veuillez saisir votre numéro de téléphone dans le format suivant : <i>33 (0)1 23 45 67 89</i>');

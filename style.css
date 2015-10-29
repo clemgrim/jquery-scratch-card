@@ -1,0 +1,59 @@
+body {
+	padding-top: 50px;
+}
+
+.scratch {
+	position: relative;
+	display: block;
+    -webkit-user-select: none !important;
+   cursor: none;
+   max-width: 100%;
+   height: auto;
+   background-color: #ccc;
+   text-align: center;
+   margin-bottom: 10px;
+}
+
+.scratch-inner {
+	display: inline-block;
+	font-size: 20px;
+	color: #fff;
+	-webkit-user-select: none !important;
+	padding: 20px 40px;
+}
+
+.scratch-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	bottom: 0;
+	right: 0;
+}
+
+.scratch-div {
+	cursor: url(https://0.s3.envato.com/files/122128592/assets/images/coin2.png), pointer;
+}
+
+.scratch-overlay-disabled {
+	cursor: default;
+}
+
+.scratch-cursor {
+	width: 40px;
+	height: 40px;
+	position: absolute;
+	z-index: 9000;
+	pointer-events: none;
+	-webkit-user-select: none !important;
+	/*background: url(https://0.s3.envato.com/files/122128592/assets/images/coin2.png) 0% 0% / 100% no-repeat;*/
+	background: url(images/euro.png) center center / 100% no-repeat;
+	display: none;
+}
+
+.form-resa {
+	display: none;
+}
+
+.form-control-feedback {
+	pointer-events: initial;
+}

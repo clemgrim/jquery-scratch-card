@@ -1,0 +1,149 @@
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>Carte à gratter</title>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+		<link rel="stylesheet" href="style.css">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+	</head>
+	<body>
+		<div class="container">
+			<h1>Jeu à gratter</h1>
+			
+			<div id="scratch-span" class="fade scratch">
+				<span class="scratch-inner">Gagné</span>
+			</div>
+	
+			<hr>
+					
+			<div class="row multiple">
+				<div class="col-md-4">
+					<div class="fade scratch">
+						<img src="http://dummyimage.com/400x200/e6b3e6/1b1e4d&text=Gagné" class="img-responsive">
+					</div>
+				</div>
+				
+				<div class="col-md-4">					
+					<div class="fade scratch">
+						<img src="http://dummyimage.com/400x200/e6b3e6/1b1e4d&text=Perdu" class="img-responsive">
+					</div>
+				</div>
+				
+				<div class="col-md-4">					
+					<div class="fade scratch">
+						<img src="http://dummyimage.com/400x200/e6b3e6/1b1e4d&text=Gagné" class="img-responsive">
+					</div>
+				</div>
+				
+				<p class="col-md-12 text-muted">Maintenez le bouton gauche de votre souris enfoncé et grattez les cartes</p>
+			</div>
+			
+			<form class="form-resa" method="post" action="#">
+				<h1>Bravo ! Vous avez gagné !</h1>
+				
+				<div class="row">
+					<div class="col-md-6">
+						<div class="form-group">
+							<label class="control-label" for="name">Nom *</label>
+							<input type="text" class="form-control" id="name" name="name" required>
+						</div>
+					</div>
+					
+					<div class="col-md-6">
+						<div class="form-group">
+							<label class="control-label" for="firstname">Prénom *</label>
+							<input type="text" class="form-control" id="firstname" name="firstname" required>
+						</div>
+					</div>
+					
+					<div class="col-md-6">
+						<div class="form-group">
+							<label class="control-label" for="email">Email *</label>
+							<input type="email" class="form-control" id="email" name="email" required>
+						</div>
+					</div>
+					
+					<div class="col-md-6">
+						<div class="form-group">
+							<label class="control-label" for="phone">Téléphone *</label>
+							<input type="tel" class="form-control" id="phone" name="phone" required>
+						</div>
+					</div>
+					
+					<div class="col-md-12">
+						<div class="form-group">
+							<label class="control-label" for="address">Adresse *</label>
+							<textarea class="form-control" id="address" name="address" required></textarea>
+						</div>
+					</div>
+					
+					<div class="col-md-6">
+						<div class="form-group">
+							<label class="control-label" for="city">Ville *</label>
+							<input type="text" class="form-control" id="city" name="city" required>
+						</div>
+					</div>
+					
+					<div class="col-md-6">
+						<div class="form-group">
+							<label class="control-label" for="zip">Code Postal *</label>
+							<input type="text" class="form-control" id="zip" name="zip" required>
+						</div>
+					</div>
+				</div>
+				
+				<button type="submit" class="btn btn-primary">Enregistrer</button>
+			</form>
+		</div>
+		
+		<script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+		<script src="http://ajax.aspnetcdn.com/ajax/jquery.validate/1.14.0/jquery.validate.min.js"></script>
+		<script src="validator.js"></script>
+		<script src="main.js"></script>
+		
+		<script>
+			$(window).load(function () {
+				$('.scratch').addClass('in');
+				
+				$('#scratch-span').scratch({
+					width: 600,
+					isCircle: false
+				});
+				
+				$('.multiple .scratch').scratch({
+					background: '#f5f5f5',
+					percent: 65,
+					onComplete: function (e, p) {
+						console.log('Finished',p.toFixed(2));
+					},
+					onAllComplete: function () {
+						$('.form-resa').fadeIn();
+					},
+					//revealRatio: 0
+				});
+				
+				$('.multiple .scratch').scratch('promise', function () {
+					console.log('Promise');
+				});
+				
+				$('.form-group').addClass('has-feedback').append('<span class="glyphicon glyphicon-remove form-control-feedback hide" />');
+				
+				$('.form-resa').validate({
+					submitHandler: function (form) {
+						console.log('in');
+					},
+					rules: {
+						phone: {
+							phone: true,
+						},
+						zip: {
+							zip: true,
+						}
+					}
+				});
+			});
+		</script>
+	</body>
+</html>
