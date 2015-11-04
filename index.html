@@ -45,6 +45,28 @@
 				<p class="col-md-12 text-muted">Maintenez le bouton gauche de votre souris enfoncé et survolez les cartes pour les gratter</p>
 			</div>
 			
+			<div class="row stars">
+                <div class="col-md-4">
+                    <div class="fade scratch">
+                        <img src="src/motif1.png" class="img-responsive">
+                    </div>
+                </div>
+                
+                <div class="col-md-4">                  
+                    <div class="fade scratch">
+                        <img src="src/motif1.png" class="img-responsive">
+                    </div>
+                </div>
+                
+                <div class="col-md-4">                  
+                    <div class="fade scratch">
+                        <img src="src/motif2.png" class="img-responsive">
+                    </div>
+                </div>
+                
+                <p class="col-md-12 text-muted">Maintenez le bouton gauche de votre souris enfoncé et survolez les cartes pour les gratter</p>
+            </div>
+			
 			<form class="form-resa" method="post" action="#">
 				<h1>Bravo ! Vous avez gagné !</h1>
 				
@@ -121,17 +143,21 @@
 				$('.multiple .scratch').scratch({
 					background: '#f5f5f5',
 					percent: 65,
-					onComplete: function (e, p) {
-						console.log('Finished',p.toFixed(2));
-					},
-					onAllComplete: function () {
-						$('.form-resa').fadeIn();
-					},
 					//revealRatio: 0
 				});
 				
+				$('.stars .scratch').scratch({
+                    background: 'src/star.png',
+                    onComplete: function (e, p) {
+                        console.log('Finished',p.toFixed(2));
+                    },
+                    onAllComplete: function () {
+                        $('.form-resa').fadeIn();
+                    },
+                });
+				
 				$('.multiple .scratch').scratch('promise', function () {
-					console.log('Promise');
+					console.log('Done');
 				});
 				
 				$('.form-group').addClass('has-feedback').append('<span class="glyphicon glyphicon-remove form-control-feedback hide" />');

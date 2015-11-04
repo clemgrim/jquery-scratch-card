@@ -97,12 +97,26 @@
 			if (isSupported) {
 				self.canvas.width = canvasWidth;
 				self.canvas.height = canvasHeight;
-				
 				self.ctx = self.canvas.getContext('2d');
-				self.ctx.fillStyle = self.options.background;
-				self.ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+				
+				if (self.options.background.substr(0,1) === '#') {
+					self.ctx.fillStyle = self.options.background;
+					self.ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+				} else {
+					var img = new Image();
+
+					img.onload = function () {
+						self.ctx.drawImage(img, 0, 0);
+					};
+					
+					img.src = self.options.background;
+				}
 			} else {
-				self.canvas.style.backgroundColor = self.options.background;
+				if (self.options.background.substr(0,1) === '#') {
+					self.canvas.style.backgroundColor = self.options.background;
+				} else {
+					self.canvas.style.backgroundImage = 'url(' + self.options.background +')';
+				}
 			}
 			
 			// Append cursor and canvas to the container
