@@ -1,6 +1,6 @@
 .scratch {
 	position: relative;
-	display: block;
+	display: none;
     user-select: none !important;
     cursor: none;
     max-width: 100%;

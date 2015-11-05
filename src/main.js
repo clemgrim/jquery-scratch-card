@@ -35,12 +35,6 @@
 		pixels: [],
 		
 		/**
-		 * Number of revealed pixels
-		 * @var Number
-		 */
-		revealed: 0,
-		
-		/**
 		 * If the card has been revealed
 		 * @var Boolean
 		 */
@@ -83,6 +77,7 @@
 		 */
 		init: function() {
 			var self = this;
+			self.$el.show();
 			var width = self.options.width || self.$el.children().eq(0).width();
 			var element = isSupported ? 'canvas' : 'div';
 			
@@ -90,34 +85,19 @@
 			self.canvas = document.createElement(element);
 			self.canvas.setAttribute('class', 'scratch-overlay scratch-' + element);
 			
-			var canvasWidth = self.$el.outerWidth();
-			var canvasHeight = self.$el.outerHeight();
-			
 			// Set up overlay element (canvas or div element, depends on browser support)
 			if (isSupported) {
-				self.canvas.width = canvasWidth;
-				self.canvas.height = canvasHeight;
+				self.canvas.width = self.$el.outerWidth();
+				self.canvas.height = self.$el.outerHeight();
 				self.ctx = self.canvas.getContext('2d');
-				
-				if (self.options.background.substr(0,1) === '#') {
-					self.ctx.fillStyle = self.options.background;
-					self.ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-				} else {
-					var img = new Image();
-
-					img.onload = function () {
-						self.ctx.drawImage(img, 0, 0);
-					};
-					
-					img.src = self.options.background;
-				}
-			} else {
-				if (self.options.background.substr(0,1) === '#') {
-					self.canvas.style.backgroundColor = self.options.background;
-				} else {
-					self.canvas.style.backgroundImage = 'url(' + self.options.background +')';
-				}
 			}
+			
+			self.$el.hide();
+			
+			self.createOverlay(function () {
+				self.$el.show();
+				self.enable();
+			});
 			
 			// Append cursor and canvas to the container
 			// attach events
@@ -130,65 +110,125 @@
 				.on('scratch.enable', self.options.onEnable)
 				.on('scratch.reset', self.options.onReset)
 				.find('img').on('dragstart', function () {return false;});
+		},
+		
+		/**
+		 * Create overlay (fill overlay with a color or an image background)
+		 * @param cb a callback function
+		 * @return void
+		 */
+		createOverlay: function (cb) {
+			var self = this;
 			
+			if (isSupported) {
+				self.ctx.clearRect(0, 0, self.canvas.width, self.canvas.height);
+				
+				if (self.options.background.substr(0,1) === '#') {
+					self.ctx.fillStyle = self.options.background;
+					self.ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+				} else {
+					var img = new Image();
+
+					img.onload = function () {
+						self.ctx.drawImage(img, 0, 0);
+
+						if ($.isFunction(cb)) {
+							cb();
+						}
+					};
+					
+					img.src = self.options.background;
+				}
+			} else {
+				if (self.options.background.substr(0,1) === '#') {
+					self.canvas.style.backgroundColor = self.options.background;
+				} else {
+					self.canvas.style.backgroundImage = 'url(' + self.options.background +')';
+				}
+				
+				if ($.isFunction(cb)) {
+					cb();
+				}
+			}
+		},
+		
+		/**
+		 * Update canvas pixels status
+		 * @return void
+		 */
+		getPixels: function () {
 			// Create the pixel array
-			var i, j;
+			var self = this;
+			var i, j, data, alpha;
+			var width = self.canvas.width;
+			var height = self.canvas.height;
 			
 			// define array pixel for the current instance
 			// prevent prototype modification...
 			self.pixels = [];
 			
-			for (i = 0 ; i < canvasWidth ; i++) {
-				for (j = 0 ; j < canvasHeight ; j++) {
+			if (!isSupported) {
+				return;
+			}
+			
+			data = self.ctx.getImageData(0, 0, width, height).data;
+			
+			for (i = 0 ; i < width ; i++) {
+				for (j = 0 ; j < height ; j++) {
 					if (!self.pixels[i]) {
 						self.pixels[i] = [];
 					}
 					
-					self.pixels[i][j] = 1;
+					alpha = data[j * width + i + 4];
+					
+					if (alpha < 0.3) {
+						self.pixels[i][j] = -1;
+					} else {
+						self.pixels[i][j] = 1;
+					}
 				}
 			}
-			
-			// Enable scratching...
-			self.enable();
 		},
 		
 		/**
 		 * Get pixels revealed / total pixels percentage
+		 * @param relative if true, the percentage depends on the pixel location
 		 * @return Float
 		 */
-		getPercent: function () {
+		getRatio: function (relative) {
 			var self = this;
 			
-			if (isSupported) {
-				return self.revealed ? self.revealed / (self.canvas.width * self.canvas.height) : 0;
+			if (!isSupported) {
+				return self.isComplete ? 1 : 0;
 			}
 			
-			return self.isComplete ? 100 : 0;
-		},
-		
-		/**
-		 * Get pixel revealed ratio based on the pixel position
-		 * Each pixel has a weight, based on the distance with the container center
-		 * @return Float
-		 */
-		getRevealRatio: function () {
-			var self = this;
-			var count = 0;
 			var i, j, px, py;
+			var count = 0;
 			var width = self.pixels.length;
 			var height = self.pixels[0].length;
+			var pixels = 0;
 			
-			for(i = 0 ; i < width ; i++) {
+			for (i = 0 ; i < width ; i++) {
 				for (j = 0 ; j < height ; j++) {
-					if (0 === self.pixels[i][j]) {
-						px = Math.pow(1-(2*Math.abs(i-width/2)/width),1.5);
-						py = Math.pow(1-(2*Math.abs(j-height/2)/height),1.5);
-						count +=  px * py;
+					if (-1 === self.pixels[i][j]) {
+						continue;
 					}
+					
+					if (0 === self.pixels[i][j]) {
+						if (relative) {
+							px = Math.pow(1-(2*Math.abs(i-width/2)/width),1.5);
+							py = Math.pow(1-(2*Math.abs(j-height/2)/height),1.5);
+							count +=  px * py;
+						} else {
+							count++;
+						}
+					}
+					
+					pixels++;
 				}
 			}
  
-			return count/(width*height);
+			return count/pixels;
 		},
 		
 		/**
@@ -299,10 +339,9 @@
 						// Sqrt(i² + j²) in our case because xb = x + i and yb = y + j
 						(!self.options.isCircle || Math.sqrt(i*i + j*j) <= delta) &&
 						// only if the pixel is visible (has not been scratched)
-						self.pixels[x+i] && self.pixels[x+i][y+j]
+						self.pixels[x+i] && self.pixels[x+i][y+j] === 1
 					) {
 						self.pixels[x+i][y+j] = 0;
-						self.revealed++;
 					}
 				}
 			}
@@ -328,7 +367,7 @@
 		 */
 		isRevealed: function () {
 			var self = this;
-			return self.options.revealRatio ? self.getRevealRatio() > self.options.revealRatio : self.getPercent() >= self.options.percent / 100;
+			return self.options.revealRatio ? self.getRatio(true) > self.options.revealRatio : self.getRatio() >= self.options.percent / 100;
 		},
 		
 		/**
@@ -338,6 +377,8 @@
 		enable: function () {
 			var self = this;
 			self.$el.find('.scratch-overlay').removeClass('scratch-overlay-disabled').show();
+			
+			self.getPixels();
 			
 			if (!self.isComplete && !self.isRevealed()) {
 				if (isSupported) {
@@ -372,7 +413,7 @@
 			isClicked = false;
 			
 			self.$el.find('.scratch-overlay').hide();
-			self.$el.trigger('scratch.complete', self.getPercent(), self.getRevealRatio());	
+			self.$el.trigger('scratch.complete', self.getRatio(), self.getRatio(true));	
 		},
 		
 		/**
@@ -383,19 +424,9 @@
 			var self = this;
 			
 			self.disable();
-			self.revealed = 0;
 			self.isComplete = false;
-			self.pixels = [];
-			
-			var i, j;
-			
-			for(i = 0 ; i < self.pixels.length ; i++) {
-				for (j = 0 ; j < self.pixels[i].length ; j++) {
-					self.pixels[i][j] = 1;
-				}
-			}
-			
-			self.enable();
+
+			self.createOverlay($.proxy(self.enable, self));
 			self.$el.trigger('scratch.reset');
 		},
 		
@@ -436,18 +467,19 @@
 		options = options || {};
 
 		var args = [].slice.call(arguments, 1);
-		var self, plg, ret;
+		var self, plg, ret, returns;
 		var promises = [];
 		
-		ret = this.map(function() {
+		returns = this.map(function() {
 			self = $(this);
-			plg = self.data(plgName);
 			
-			if (!plg) {
+			if (!(plg = self.data(plgName))) {
 				plg = new Plugin(self, options);
 				self.data(plgName, plg);
-			} else if (typeof options == 'string' && typeof plg[options] == 'function') {
+			} else if ($.isFunction(plg[options])) {
 				ret = plg[options].apply(plg, args);
+			} else if (options !== 'promise') {
+				throw new Error('Unknown method ' + options);
 			}
 			
 			var dfd = $.Deferred();
@@ -460,17 +492,17 @@
 			
 			promises.push(dfd.promise());
 			
-			return ret === null || ret === undefined ? this : ret;
+			return typeof ret === 'undefined' ? this : ret;
 		});
 
 		// handle promise
-		if (typeof options.onAllComplete === 'function') {
+		if ($.isFunction(options.onAllComplete)) {
 			$.when.apply($, promises).done(options.onAllComplete);
-		} else if (options === 'promise' && typeof args[0] === 'function') {
+		} else if (options === 'promise' && $.isFunction(args[0])) {
 			$.when.apply($, promises).done(args[0]);
 		}
 		
-		return ret.length > 1 ? ret : ret[0];
+		return returns.length > 1 ? returns : returns[0];
 	};
 	
 	$.fn[plgName].defaults = {

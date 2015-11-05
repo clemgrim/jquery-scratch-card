@@ -17,7 +17,7 @@
 		<div class="container">
 			<h1>Jeu à gratter</h1>
 			
-			<div id="scratch-span" class="fade scratch">
+			<div id="scratch-span" class="scratch">
 				<span class="scratch-inner">Gagné</span>
 			</div>
 	
@@ -25,41 +25,39 @@
 					
 			<div class="row multiple">
 				<div class="col-md-4">
-					<div class="fade scratch">
+					<div class="scratch">
 						<img src="http://dummyimage.com/400x200/e6b3e6/1b1e4d&text=Gagné" class="img-responsive">
 					</div>
 				</div>
 				
 				<div class="col-md-4">					
-					<div class="fade scratch">
+					<div class="scratch">
 						<img src="http://dummyimage.com/400x200/e6b3e6/1b1e4d&text=Perdu" class="img-responsive">
 					</div>
 				</div>
 				
 				<div class="col-md-4">					
-					<div class="fade scratch">
+					<div class="scratch">
 						<img src="http://dummyimage.com/400x200/e6b3e6/1b1e4d&text=Gagné" class="img-responsive">
 					</div>
 				</div>
-				
-				<p class="col-md-12 text-muted">Maintenez le bouton gauche de votre souris enfoncé et survolez les cartes pour les gratter</p>
 			</div>
 			
 			<div class="row stars">
                 <div class="col-md-4">
-                    <div class="fade scratch">
+                    <div class="scratch">
                         <img src="src/motif1.png" class="img-responsive">
                     </div>
                 </div>
                 
                 <div class="col-md-4">                  
-                    <div class="fade scratch">
+                    <div class="scratch">
                         <img src="src/motif1.png" class="img-responsive">
                     </div>
                 </div>
                 
                 <div class="col-md-4">                  
-                    <div class="fade scratch">
+                    <div class="scratch">
                         <img src="src/motif2.png" class="img-responsive">
                     </div>
                 </div>
@@ -133,9 +131,7 @@
 		
 		<script>
 			$(window).load(function () {
-				$('.scratch').addClass('in');
-				
-				$('#scratch-span').scratch({
+				/*$('#scratch-span').scratch({
 					width: 600,
 					isCircle: false
 				});
@@ -144,21 +140,22 @@
 					background: '#f5f5f5',
 					percent: 65,
 					//revealRatio: 0
-				});
+				});*/
 				
 				$('.stars .scratch').scratch({
                     background: 'src/star.png',
                     onComplete: function (e, p) {
-                        console.log('Finished',p.toFixed(2));
+                    	var plg = $(this).data('scratch');
+                        console.log('Finished',p.toFixed(2), plg.getRatio(true));
                     },
                     onAllComplete: function () {
                         $('.form-resa').fadeIn();
                     },
                 });
 				
-				$('.multiple .scratch').scratch('promise', function () {
+				/*$('.multiple .scratch').scratch('promise', function () {
 					console.log('Done');
-				});
+				});*/
 				
 				$('.form-group').addClass('has-feedback').append('<span class="glyphicon glyphicon-remove form-control-feedback hide" />');
 				
