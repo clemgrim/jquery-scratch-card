@@ -29,13 +29,6 @@
 	
 	Plugin.prototype = {
 		/**
-		 * bidimensional array that contains pixels to scratch
-		 * Each pixel has a value : 1 if the pixel is visible, 0 if the pixel is not visible (has been scratched)
-		 * @var Array
-		 */
-		pixels: [],
-		
-		/**
 		 * If the card has been revealed
 		 * @var Boolean
 		 */
@@ -52,7 +45,7 @@
 		 * Canvas element in the DOM (not a jQuery wrapper)
 		 * @var DOMElement
 		 */
-		canvas: null,
+		cnv: null,
 		
 		/**
 		 * Canvas context
@@ -87,14 +80,14 @@
 			var element = isSupported ? 'canvas' : 'div';
 			
 			self.$el.width(width).height(self.options.height);
-			self.canvas = document.createElement(element);
-			self.canvas.setAttribute('class', 'scratch-overlay scratch-' + element);
+			self.cnv = document.createElement(element);
+			self.cnv.setAttribute('class', 'scratch-overlay scratch-' + element);
 			
 			// Set up overlay element (canvas or div element, depends on browser support)
 			if (isSupported) {
-				self.canvas.width = self.$el.outerWidth();
-				self.canvas.height = self.$el.outerHeight();
-				self.ctx = self.canvas.getContext('2d');
+				self.cnv.width = self.$el.outerWidth();
+				self.cnv.height = self.$el.outerHeight();
+				self.ctx = self.cnv.getContext('2d');
 			}
 			
 			self.$el.hide();
@@ -102,14 +95,13 @@
 			self.createOverlay(function () {
 				self.$el.show();
 				self.scratchablePx = self.getVisiblePixels();
-				self.getPixels();
 				self.enable();
 			});
 			
 			// Append cursor and canvas to the container
 			// attach events
 			self.$el
-				.append(self.canvas)
+				.append(self.cnv)
 				.append('<div class="scratch-cursor"/>')
 				.on('scratch.complete', self.options.onComplete)
 				.on('scratch.scratch', self.options.onScratch)
@@ -145,11 +137,11 @@
 			var self = this;
 			
 			if (isSupported) {
-				self.ctx.clearRect(0, 0, self.canvas.width, self.canvas.height);
+				self.ctx.clearRect(0, 0, self.cnv.width, self.cnv.height);
 				
 				if (self.options.background.substr(0,1) === '#') {
 					self.ctx.fillStyle = self.options.background;
-					self.ctx.fillRect(0, 0, self.canvas.width, self.canvas.height);
+					self.ctx.fillRect(0, 0, self.cnv.width, self.cnv.height);
 				} else {
 					var img = new Image();
 
@@ -165,9 +157,9 @@
 				}
 			} else {
 				if (self.options.background.substr(0,1) === '#') {
-					self.canvas.style.backgroundColor = self.options.background;
+					self.cnv.style.backgroundColor = self.options.background;
 				} else {
-					self.canvas.style.backgroundImage = 'url(' + self.options.background +')';
+					self.cnv.style.backgroundImage = 'url(' + self.options.background +')';
 				}
 				
 				if ($.isFunction(cb)) {
@@ -182,7 +174,7 @@
 		 */
 		getVisiblePixels: function () {
 			var self = this;
-			var data = self.ctx.getImageData(0, 0, self.canvas.width, self.canvas.height).data;
+			var data = self.ctx.getImageData(0, 0, self.cnv.width, self.cnv.height).data;
 			var pixels = 0;
 			var i;
 			
@@ -196,71 +188,17 @@
 		},
 		
 		/**
-		 * Create an array of pixels [x][y]
-		 * Each pixel has a value :
-		 * -1 transparent pixel
-		 * 1 normal pixel
-		 * 0 scratched pixel (by the user)
-		 */
-		getPixels: function () {
-			var self = this;
-			var width = self.canvas.width;
-			var height = self.canvas.height;
-			var data = self.ctx.getImageData(0, 0, width, height).data;
-			var x, y, alpha;
-			
-			self.pixels = [];
-			
-			for (y = 0; y < height ; y++) {
-				for(x = 0; x < height ; x++) {
-		            alpha = data[((width * y) + x) * 4 + 3];
-		            
-		            if (!self.pixels[x]) {
-		            	self.pixels[x] = [];
-		            }
-		            
-	            	self.pixels[x][y] = alpha < 0.3 ? -1 : 1;
-		          }
-		        } 
-		},
-		
-		/**
-		 * Get pixels revealed / total pixels percentage
-		 * @param relative if true, the percentage depends on the pixel location
+		 * Get pixels revealed / total pixels ratio
 		 * @return Float
 		 */
-		getRatio: function (relative) {
+		getRatio: function () {
 			var self = this;
 			
 			if (!isSupported) {
 				return self.isComplete ? 1 : 0;
-			} else if (!relative) {
-				return 1 - self.getVisiblePixels() / self.scratchablePx;
-			}
+			} 
 
-			var i, j, px, py;
-			var count = 0;
-			var width = self.pixels.length;
-			var height = self.pixels[0].length;
-			var pixels = 0;
-			
-			for (i = 0 ; i < width ; i++) {
-				for (j = 0 ; j < height ; j++) {
-					if (-1 === self.pixels[i][j]) {
-						continue;
-					}
-					
-					if (0 === self.pixels[i][j]) {
-						px = Math.pow(1-(2*Math.abs(i-width/2)/width),1.5);
-						py = Math.pow(1-(2*Math.abs(j-height/2)/height),1.5);
-						count +=  px * py;
-					}
-					
-					pixels++;
-				}
-			}
-			
-			return count / pixels;
+			return 1 - self.getVisiblePixels() / self.scratchablePx;
 		},
 		
 		/**
@@ -353,30 +291,12 @@
 		 */
 		scratch: function (x, y) {
 			var self = this;
-			var i, j;
 			
 			// delta is the distance where we can draw around the given position
 			var delta = Math.round(self.options.cursorWidth / 2);
 			
 			x = parseInt(x);
 			y = parseInt(y);
-			
-			// start with negative delta: -a 0 -a where 0 is the current position
-			for (i = -delta ; i < delta ; i++) {
-				for (j = -delta ; j < delta ; j++) {
-					if (
-						// if it is a circle, we draw only if the pixel is in the disc area
-						// eg if distance <= radius
-						// formula : Sqrt((xb - xa)² + (yb - ya)²)
-						// Sqrt(i² + j²) in our case because xb = x + i and yb = y + j
-						(!self.options.isCircle || Math.sqrt(i*i + j*j) <= delta) &&
-						// only if the pixel is visible (has not been scratched)
-						self.pixels[x+i] && self.pixels[x+i][y+j] === 1
-					) {
-						self.pixels[x+i][y+j] = 0;
-					}
-				}
-			}
 			
 			// clear canvas
 			if (self.options.isCircle) {
@@ -398,8 +318,7 @@
 		 * @return void
 		 */
 		isRevealed: function () {
-			var self = this;
-			return self.options.revealRatio ? self.getRatio(true) > self.options.revealRatio : self.getRatio() >= self.options.percent / 100;
+			return this.getRatio() >= this.options.percent / 100;
 		},
 		
 		/**
@@ -443,7 +362,7 @@
 			isClicked = false;
 			
 			self.$el.find('.scratch-overlay').hide();
-			self.$el.trigger('scratch.complete', self.getRatio(), self.getRatio(true));	
+			self.$el.trigger('scratch.complete', self.getRatio());	
 		},
 		
 		/**
@@ -456,7 +375,6 @@
 			self.disable();
 			self.isComplete = false;
 			self.scratchablePx = self.getVisiblePixels();
-			self.getPixels();
 			self.createOverlay($.proxy(self.enable, self));
 			self.$el.trigger('scratch.reset');
 		},
@@ -543,7 +461,6 @@
 		cursorWidth: 20,
 		isCircle: true,
 		percent: 65,
-		revealRatio: 0.11,
 		onComplete: null,
 		onScratch: null,
 		onDisable: null,
