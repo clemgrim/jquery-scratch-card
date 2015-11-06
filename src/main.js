@@ -23,7 +23,8 @@
 		
 		self.$el = $el;
 		self.options = $.extend({}, $.fn.scratch.defaults, options);
-		self.init();
+		
+		self.imagesLoaded().done($.proxy(self.init, self));
 	}
 	
 	Plugin.prototype = {
@@ -71,6 +72,10 @@
 		 */
 		options: {},
 		
+		scratchablePx: 0,
+		
+		scratchedPx: 0,
+		
 		/**
 		 * Plugin initialisation
 		 * @return void
@@ -96,6 +101,8 @@
 			
 			self.createOverlay(function () {
 				self.$el.show();
+				self.scratchablePx = self.getVisiblePixels();
+				self.getPixels();
 				self.enable();
 			});
 			
@@ -113,6 +120,23 @@
 		},
 		
 		/**
+		 * Load images in the container before initialization
+		 */
+		imagesLoaded: function () {
+			var promises = this.$el.find('img').map(function () {
+				var dfd = $.Deferred();
+				var img = new Image();
+				
+				img.onload = dfd.resolve;
+				img.src = this.src;
+				
+				return dfd.promise();
+			}).toArray();
+			
+			return $.when.apply($, promises);
+		},
+		
+		/**
 		 * Create overlay (fill overlay with a color or an image background)
 		 * @param cb a callback function
 		 * @return void
@@ -125,7 +149,7 @@
 				
 				if (self.options.background.substr(0,1) === '#') {
 					self.ctx.fillStyle = self.options.background;
-					self.ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+					self.ctx.fillRect(0, 0, self.canvas.width, self.canvas.height);
 				} else {
 					var img = new Image();
 
@@ -156,38 +180,41 @@
 		 * Update canvas pixels status
 		 * @return void
 		 */
-		getPixels: function () {
-			// Create the pixel array
+		getVisiblePixels: function () {
 			var self = this;
-			var i, j, data, alpha;
-			var width = self.canvas.width;
-			var height = self.canvas.height;
+			var data = self.ctx.getImageData(0, 0, self.canvas.width, self.canvas.height).data;
+			var pixels = 0;
+			var i;
 			
-			// define array pixel for the current instance
-			// prevent prototype modification...
-			self.pixels = [];
-			
-			if (!isSupported) {
-				return;
-			}
-			
-			data = self.ctx.getImageData(0, 0, width, height).data;
-			
-			for (i = 0 ; i < width ; i++) {
-				for (j = 0 ; j < height ; j++) {
-					if (!self.pixels[i]) {
-						self.pixels[i] = [];
-					}
-					
-					alpha = data[j * width + i + 4];
-					
-					if (alpha < 0.3) {
-						self.pixels[i][j] = -1;
-					} else {
-						self.pixels[i][j] = 1;
-					}
+			for (i = 0 ; i < data.length ; i+=4) {
+				if (data[i+3] > 0.3) {
+					pixels++;
 				}
 			}
+			
+			return pixels;
+		},
+		
+		getPixels: function () {
+			var self = this;
+			var width = self.canvas.width;
+			var height = self.canvas.height;
+			var data = self.ctx.getImageData(0, 0, width, height).data;
+			var x, y, alpha;
+			
+			self.pixels = [];
+			
+			for (y = 0; y < height ; y++) {
+				for(x = 0; x < height ; x++) {
+		            alpha = data[((width * y) + x) * 4 + 3];
+		            
+		            if (!self.pixels[x]) {
+		            	self.pixels[x] = [];
+		            }
+		            
+	            	self.pixels[x][y] = alpha < 0.3 ? -1 : 1;
+		          }
+		        } 
 		},
 		
 		/**
@@ -200,8 +227,10 @@
 			
 			if (!isSupported) {
 				return self.isComplete ? 1 : 0;
+			} else if (!relative) {
+				return 1 - self.getVisiblePixels() / self.scratchablePx;
 			}
-			
+
 			var i, j, px, py;
 			var count = 0;
 			var width = self.pixels.length;
@@ -215,20 +244,16 @@
 					}
 					
 					if (0 === self.pixels[i][j]) {
-						if (relative) {
-							px = Math.pow(1-(2*Math.abs(i-width/2)/width),1.5);
-							py = Math.pow(1-(2*Math.abs(j-height/2)/height),1.5);
-							count +=  px * py;
-						} else {
-							count++;
-						}
+						px = Math.pow(1-(2*Math.abs(i-width/2)/width),1.5);
+						py = Math.pow(1-(2*Math.abs(j-height/2)/height),1.5);
+						count +=  px * py;
 					}
 					
 					pixels++;
 				}
 			}
- 
-			return count/pixels;
+			
+			return count / pixels;
 		},
 		
 		/**
@@ -378,8 +403,6 @@
 			var self = this;
 			self.$el.find('.scratch-overlay').removeClass('scratch-overlay-disabled').show();
 			
-			self.getPixels();
-			
 			if (!self.isComplete && !self.isRevealed()) {
 				if (isSupported) {
 					self.$el.on('mousemove touchmove click', $.proxy(self.mousemove, self));
@@ -425,7 +448,8 @@
 			
 			self.disable();
 			self.isComplete = false;
-
+			self.scratchablePx = self.getVisiblePixels();
+			self.getPixels();
 			self.createOverlay($.proxy(self.enable, self));
 			self.$el.trigger('scratch.reset');
 		},
@@ -511,7 +535,7 @@
 		height: 'auto',
 		cursorWidth: 20,
 		isCircle: true,
-		percent: 90,
+		percent: 65,
 		revealRatio: 0.11,
 		onComplete: null,
 		onScratch: null,

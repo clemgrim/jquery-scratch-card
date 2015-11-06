@@ -144,6 +144,7 @@
 				
 				$('.stars .scratch').scratch({
                     background: 'src/star.png',
+                    revealRatio: 0.25,
                     onComplete: function (e, p) {
                     	var plg = $(this).data('scratch');
                         console.log('Finished',p.toFixed(2), plg.getRatio(true));
