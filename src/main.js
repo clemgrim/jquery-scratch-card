@@ -195,6 +195,13 @@
 			return pixels;
 		},
 		
+		/**
+		 * Create an array of pixels [x][y]
+		 * Each pixel has a value :
+		 * -1 transparent pixel
+		 * 1 normal pixel
+		 * 0 scratched pixel (by the user)
+		 */
 		getPixels: function () {
 			var self = this;
 			var width = self.canvas.width;
