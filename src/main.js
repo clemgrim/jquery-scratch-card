@@ -15,6 +15,9 @@
 		return !!(elem.getContext && elem.getContext('2d'));
 	}
 	
+	/**
+	 * Empty function used for queuing
+	 */
 	function queue(next) {
 		next();
 	}
@@ -182,8 +185,8 @@
 		 */
 		getVisiblePixels: function () {
 			try {
-				var self = this;
-				var data = self.ctx.getImageData(0, 0, self.cnv.width, self.cnv.height).data;
+				var cnv = this.cnv;
+				var data = this.ctx.getImageData(0, 0, cnv.width, cnv.height).data;
 				var pixels = 0;
 				var i;
 				
@@ -205,13 +208,11 @@
 		 * @return Float
 		 */
 		getRatio: function () {
-			var self = this;
-			
 			if (!isSupported) {
-				return self.isComplete ? 1 : 0;
+				return this.isComplete ? 1 : 0;
 			} 
 
-			return 1 - self.getVisiblePixels() / self.scratchablePx;
+			return 1 - this.getVisiblePixels() / this.scratchablePx;
 		},
 		
 		/**
@@ -223,14 +224,15 @@
 			
 			// get cursor position
 			var self = this;
+			var options = self.options;
 			var offset = self.$el.offset();
 			var x = (e.pageX || e.originalEvent.touches[0].pageX) - offset.left;
 			var y = (e.pageY || e.originalEvent.touches[0].pageY) - offset.top;
 			
 			// update cursor div
 			self.$el.find('.scratch-cursor').css({
-				top: y - self.options.cursorWidth,
-				left: x - self.options.cursorWidth,
+				top: y - options.cursorWidth,
+				left: x - options.cursorWidth,
 				display: 'block'
 			});
 
@@ -248,7 +250,7 @@
 				if (x == self.lastPos.x) {
 					min = Math.min(y, self.lastPos.y);
 					max = Math.max(y, self.lastPos.y);
-					inc = self.options.cursorWidth / 2;
+					inc = options.cursorWidth / 2;
 					
 					for (tmpY = min ; tmpY < max ; tmpY += inc) {
 						self.scratch(x, tmpY);
@@ -258,7 +260,7 @@
 				else {
 					min = Math.min(x, self.lastPos.x);
 					max = Math.max(x, self.lastPos.x);
-					inc = self.options.cursorWidth / 4;
+					inc = options.cursorWidth / 4;
 					
 					// calculate the slope (a)
 					// (yb - ya) / (xb - xa)
@@ -348,21 +350,23 @@
 		 */
 		enable: function () {
 			var self = this;
-			self.$el.find('.scratch-overlay').removeClass('scratch-overlay-disabled').show();
+			var $el = self.$el;
+			
+			$el.find('.scratch-overlay').removeClass('scratch-overlay-disabled').show();
 			
 			if (!self.isComplete && !self.isRevealed()) {
 				if (isSupported) {
-					self.$el.on('mousemove touchmove click', $.proxy(self.mousemove, self));
-					self.$el.on('mouseleave', function () {
-						self.$el.find('.scratch-cursor').hide();
+					$el.on('mousemove touchmove click', $.proxy(self.mousemove, self));
+					$el.on('mouseleave', function () {
+						$el.find('.scratch-cursor').hide();
 					});
 				} else {
-					self.$el.on('click', function () {
-						self.$el.find('.scratch-overlay').fadeOut($.proxy(self.clear, self));
+					$el.on('click', function () {
+						$el.find('.scratch-overlay').fadeOut($.proxy(self.clear, self));
 					});
 				}
 				
-				self.$el.on('mouseleave mouseup touchend', function () {
+				$el.on('mouseleave mouseup touchend', function () {
 					self.lastPos = false;
 				});
 			}
@@ -409,11 +413,11 @@
 		 * @return void
 		 */
 		disable: function () {
-			var self = this;
+			var $el = this.$el;
 			
-			self.$el.find('.scratch-cursor').hide();
-			self.$el.off('mousemove touchmove click');
-			self.$el.find('.scratch-overlay').addClass('scratch-overlay-disabled');
+			$el.find('.scratch-cursor').hide();
+			$el.off('mousemove touchmove click');
+			$el.find('.scratch-overlay').addClass('scratch-overlay-disabled');
 			self.trigger('disabled');
 		},
 		
