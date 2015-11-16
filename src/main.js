@@ -15,15 +15,19 @@
 		return !!(elem.getContext && elem.getContext('2d'));
 	}
 	
+	function queue(next) {
+		next();
+	}
+	
 	/**
 	 * Plugin constructor
 	 */
 	function Plugin ($el, options) {
 		var self = this;
 		
-		self.$el = $el;
-		self.options = $.extend({}, $.fn.scratch.defaults, options);
+		self.$el = $el.queue(plgName, [queue]);
 		
+		self.options = $.extend({}, $.fn.scratch.defaults, options);
 		self.imagesLoaded().done($.proxy(self.init, self));
 	}
 	
@@ -65,19 +69,22 @@
 		 */
 		options: {},
 		
+		/**
+		 * Number of scratchable pixels in the canvas
+		 */
 		scratchablePx: 0,
-		
-		scratchedPx: 0,
 		
 		/**
 		 * Plugin initialisation
 		 * @return void
 		 */
 		init: function() {
-			var self = this;
+			var self = this, width, element;
+			
 			self.$el.show();
-			var width = self.options.width || self.$el.children().eq(0).width();
-			var element = isSupported ? 'canvas' : 'div';
+			
+			width = self.options.width || self.$el.children().eq(0).width();
+			element = isSupported ? 'canvas' : 'div';
 			
 			self.$el.width(width).height(self.options.height);
 			self.cnv = document.createElement(element);
@@ -103,29 +110,27 @@
 			self.$el
 				.append(self.cnv)
 				.append('<div class="scratch-cursor"/>')
-				.on('scratch.complete', self.options.onComplete)
-				.on('scratch.scratch', self.options.onScratch)
-				.on('scratch.disable', self.options.onDisable)
-				.on('scratch.enable', self.options.onEnable)
-				.on('scratch.reset', self.options.onReset)
-				.find('img').on('dragstart', function () {return false;});
+				.on(plgName + '.complete', self.options.onComplete)
+				.on(plgName + '.scratch', self.options.onScratch)
+				.on(plgName + '.disable', self.options.onDisable)
+				.on(plgName + '.enable', self.options.onEnable)
+				.on(plgName + '.reset', self.options.onReset)
+				.find('img').on('dragstart', function () {return false;});				
 		},
 		
 		/**
 		 * Load images in the container before initialization
 		 */
 		imagesLoaded: function () {
-			var promises = this.$el.find('img').map(function () {
-				var dfd = $.Deferred();
+			var type = 'scratch.loaded', images = this.$el.find('img');
+			
+			return images.each(function () {
+				images.queue(type, queue);
 				var img = new Image();
 				
-				img.onload = dfd.resolve;
+				img.onload = images.dequeue.bind(images, type);
 				img.src = this.src;
-				
-				return dfd.promise();
-			}).toArray();
-			
-			return $.when.apply($, promises);
+			}).promise(type);
 		},
 		
 		/**
@@ -135,31 +140,34 @@
 		 */
 		createOverlay: function (cb) {
 			var self = this;
+			var background = self.options.background;
+			var width = self.cnv.width;
+			var height = self.cnv.height;
 			
 			if (isSupported) {
-				self.ctx.clearRect(0, 0, self.cnv.width, self.cnv.height);
+				self.ctx.clearRect(0, 0, width, height);
 				
-				if (self.options.background.substr(0,1) === '#') {
-					self.ctx.fillStyle = self.options.background;
-					self.ctx.fillRect(0, 0, self.cnv.width, self.cnv.height);
+				if (background.substr(0,1) === '#') {
+					self.ctx.fillStyle = background;
+					self.ctx.fillRect(0, 0, width, height);
 				} else {
 					var img = new Image();
 
 					img.onload = function () {
-						self.ctx.drawImage(img, 0, 0);
+						self.ctx.drawImage(img, 0, 0, width, height);
 
 						if ($.isFunction(cb)) {
 							cb();
 						}
 					};
 					
-					img.src = self.options.background;
+					img.src = background;
 				}
 			} else {
-				if (self.options.background.substr(0,1) === '#') {
-					self.cnv.style.backgroundColor = self.options.background;
+				if (background.substr(0,1) === '#') {
+					self.cnv.style.backgroundColor = background;
 				} else {
-					self.cnv.style.backgroundImage = 'url(' + self.options.background +')';
+					self.cnv.style.backgroundImage = 'url(' + background +')';
 				}
 				
 				if ($.isFunction(cb)) {
@@ -173,18 +181,23 @@
 		 * @return void
 		 */
 		getVisiblePixels: function () {
-			var self = this;
-			var data = self.ctx.getImageData(0, 0, self.cnv.width, self.cnv.height).data;
-			var pixels = 0;
-			var i;
-			
-			for (i = 0 ; i < data.length ; i+=4) {
-				if (data[i+3] > 0.3) {
-					pixels++;
+			try {
+				var self = this;
+				var data = self.ctx.getImageData(0, 0, self.cnv.width, self.cnv.height).data;
+				var pixels = 0;
+				var i;
+				
+				for (i = 0 ; i < data.length ; i+=4) {
+					if (data[i+3] > 0.3) {
+						pixels++;
+					}
 				}
+				
+				return pixels;
+			} catch (e) {
+				console.log('Cannot determine visible pixels for this scratch card');
+				return 0;
 			}
-			
-			return pixels;
 		},
 		
 		/**
@@ -277,7 +290,7 @@
 			}
 			
 			// trigger event
-			self.$el.trigger('scratch.scratch');
+			self.trigger('scratch');
 			
 			// if we're full, clear the container and display the card
 			if (self.isRevealed()) {
@@ -290,26 +303,27 @@
 		 * @return void
 		 */
 		scratch: function (x, y) {
-			var self = this;
+			var ctx = this.ctx;
+			var options = this.options;
 			
 			// delta is the distance where we can draw around the given position
-			var delta = Math.round(self.options.cursorWidth / 2);
+			var delta = Math.round(options.cursorWidth / 2);
 			
 			x = parseInt(x);
 			y = parseInt(y);
 			
 			// clear canvas
-			if (self.options.isCircle) {
-				self.ctx.save();
-				self.ctx.globalCompositeOperation = 'destination-out';
-				self.ctx.beginPath();
-				self.ctx.arc(x, y, delta, 0, 2 * Math.PI);
-				self.ctx.closePath();
-				self.ctx.fillStyle = "rgba(0, 0, 0, 1)";
-				self.ctx.fill();
-				self.ctx.restore();
+			if (options.isCircle) {
+				ctx.save();
+				ctx.globalCompositeOperation = 'destination-out';
+				ctx.beginPath();
+				ctx.arc(x, y, delta, 0, 2 * Math.PI);
+				ctx.closePath();
+				ctx.fillStyle = "rgba(0, 0, 0, 1)";
+				ctx.fill();
+				ctx.restore();
 			} else {
-				self.ctx.clearRect(x-delta, y-delta, self.options.cursorWidth, self.options.cursorWidth);
+				ctx.clearRect(x-delta, y-delta, options.cursorWidth, options.cursorWidth);
 			}
 		},
 		
@@ -319,6 +333,13 @@
 		 */
 		isRevealed: function () {
 			return this.getRatio() >= this.options.percent / 100;
+		},
+		
+		/**
+		 * Trigger an event on the element
+		 */
+		trigger: function (evt) {
+			return this.$el.trigger(plgName + '.' + evt, [].slice.call(arguments, 1));
 		},
 		
 		/**
@@ -346,7 +367,7 @@
 				});
 			}
 			
-			self.$el.trigger('scratch.enable');
+			self.trigger('enable');
 		},
 		
 		/**
@@ -362,7 +383,7 @@
 			isClicked = false;
 			
 			self.$el.find('.scratch-overlay').hide();
-			self.$el.trigger('scratch.complete', self.getRatio());	
+			self.trigger('complete', self.getRatio()).dequeue(plgName);	
 		},
 		
 		/**
@@ -374,9 +395,12 @@
 			
 			self.disable();
 			self.isComplete = false;
-			self.scratchablePx = self.getVisiblePixels();
-			self.createOverlay($.proxy(self.enable, self));
-			self.$el.trigger('scratch.reset');
+			self.createOverlay(function () {
+				self.$el.show();
+				self.scratchablePx = self.getVisiblePixels();
+				self.enable();
+			});
+			self.trigger('reset').queue(plgName, [queue]);
 		},
 		
 		/**
@@ -390,7 +414,7 @@
 			self.$el.find('.scratch-cursor').hide();
 			self.$el.off('mousemove touchmove click');
 			self.$el.find('.scratch-overlay').addClass('scratch-overlay-disabled');
-			self.$el.trigger('scratch.disabled');
+			self.trigger('disabled');
 		},
 		
 		/**
@@ -400,11 +424,11 @@
 		destroy: function () {
 			this.clear();
 			this.$el.removeData(plgName)
-				.off('scratch.complete')
-				.off('scratch.scratch')
-				.off('scratch.disable')
-				.off('scratch.enable')
-				.off('scratch.reset')
+				.off(plgName + '.complete')
+				.off(plgName + '.scratch')
+				.off(plgName + '.disable')
+				.off(plgName + '.enable')
+				.off(plgName + '.reset')
 				.find('img').off('dragstart');
 		}
 	};
@@ -417,7 +441,6 @@
 
 		var args = [].slice.call(arguments, 1);
 		var self, plg, ret, returns;
-		var promises = [];
 		
 		returns = this.map(function() {
 			self = $(this);
@@ -427,29 +450,10 @@
 				self.data(plgName, plg);
 			} else if ($.isFunction(plg[options])) {
 				ret = plg[options].apply(plg, args);
-			} else if (options !== 'promise') {
-				throw new Error('Unknown method ' + options);
 			}
-			
-			var dfd = $.Deferred();
-			
-			if (!plg.isComplete) {
-				self.one('scratch.complete', dfd.resolve);
-			} else {
-				dfd.resolve();
-			}
-			
-			promises.push(dfd.promise());
 			
 			return typeof ret === 'undefined' ? this : ret;
 		});
-
-		// handle promise
-		if ($.isFunction(options.onAllComplete)) {
-			$.when.apply($, promises).done(options.onAllComplete);
-		} else if (options === 'promise' && $.isFunction(args[0])) {
-			$.when.apply($, promises).done(args[0]);
-		}
 		
 		return returns.length > 1 ? returns : returns[0];
 	};
@@ -469,7 +473,7 @@
 	};
 	
 	$(function () {
-		$('body')
+		$(document)
 			.on('mousedown touchstart', function () {isClicked = true;})
 			.on('mouseup touchend', function () {isClicked = false;});
 	});

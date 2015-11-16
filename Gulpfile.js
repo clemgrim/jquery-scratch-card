@@ -9,6 +9,7 @@ gulp.task('js', function () {
 		.pipe($.jshint.reporter('fail'))
 		.pipe($.uglify())
 		.pipe(gulp.dest('./dist'))
+		.pipe($.livereload())
 		.pipe($.size());
 });
 
@@ -20,6 +21,7 @@ gulp.task('css', function () {
 		}))
 		.pipe($.minifyCss())
 		.pipe(gulp.dest('./dist'))
+		.pipe($.livereload())
 		.pipe($.size());
 });
 
@@ -40,8 +42,14 @@ gulp.task('plato', function (cb) {
 	require('plato').inspect(['./src/main.js'], './report', options, () => cb());
 });
 
-gulp.task('watch:js', ['js'], () => gulp.watch('./src/main.js', ['js']));
+gulp.task('watch:js', ['js'], () => {
+	$.livereload.listen();
+	gulp.watch('./src/main.js', ['js']);
+});
 
-gulp.task('watch:css', ['css'], () => gulp.watch('./src/style.css', ['css']));
+gulp.task('watch:css', ['css'], () => {
+	$.livereload.listen();
+	gulp.watch('./src/style.css', ['css'])
+});
 
 gulp.task('default', ['watch:js', 'watch:css', 'img']);

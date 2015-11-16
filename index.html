@@ -146,18 +146,13 @@
                     background: 'src/star.png',
                     revealRatio: 0.25,
                     onComplete: function (e, p) {
-                    	var plg = $(this).data('scratch');
-                        console.log('Finished',p.toFixed(2), plg.getRatio(true));
+                        console.log('Finished',p.toFixed(2));
                     },
-                    onAllComplete: function () {
-                        $('.form-resa').fadeIn();
-                    },
+                }).promise('scratch').done(function () {
+                	$('.form-resa').fadeIn();
+                	console.log('DONE');
                 });
-				
-				/*$('.multiple .scratch').scratch('promise', function () {
-					console.log('Done');
-				});*/
-				
+
 				$('.form-group').addClass('has-feedback').append('<span class="glyphicon glyphicon-remove form-control-feedback hide" />');
 				
 				$('.form-resa').validate({
